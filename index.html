@@ -232,7 +232,7 @@ function hostHandleDisconnect(idx){
     NET.reconTimers[idx]=setTimeout(()=>{
         if(!NET.disconnected[idx])return;
         let msg=`${NAMES[idx]} 超时未重连, 游戏结束`;
-        showOverlay(`<h2>玩家离开</h2><p>${msg}</p><button class="btn-big btn-ready" onclick="showLobby()">返回大厅</button>`);
+        showOverlay(`<h2>玩家离开</h2><p>${msg}</p><button class="btn-big btn-ready" onclick="showLobby(true)">返回大厅</button>`);
         for(let i=1;i<=2;i++){let c=NET.conns[i-1];if(c&&c.open)c.send({type:'message',text:msg,dur:10000})}
     },60000);
 }
@@ -260,7 +260,7 @@ function createRoom(name){
     NET.peer.on('open',()=>showWaiting());
     NET.peer.on('error',err=>{
         if(err.type==='unavailable-id'){NET.peer.destroy();NET.roomCode=genCode();createRoom(name);return}
-        showOverlay(`<h2>连接错误</h2><p>${err.message}</p><button class="btn-big btn-ready" onclick="showLobby()">返回</button>`);
+        showOverlay(`<h2>连接错误</h2><p>${err.message}</p><button class="btn-big btn-ready" onclick="showLobby(true)">返回</button>`);
     });
     NET.peer.on('connection',conn=>{
         // 等待第一条消息判断是新加入还是重连
@@ -303,7 +303,7 @@ function joinRoom(code,name){
     if(!NET.peer||NET.peer.destroyed){
         NET.peer=new Peer(undefined,{debug:0});
         NET.peer.on('open',()=>connectToHost());
-        NET.peer.on('error',err=>{showOverlay(`<h2>连接错误</h2><p>${err.message}</p><button class="btn-big btn-ready" onclick="showLobby()">返回</button>`)});
+        NET.peer.on('error',err=>{showOverlay(`<h2>连接错误</h2><p>${err.message}</p><button class="btn-big btn-ready" onclick="showLobby(true)">返回</button>`)});
     }else{
         connectToHost();
     }
@@ -326,6 +326,8 @@ function connectToHost(){
         if(data.type==='assign'){
             NET.myIndex=data.index;NAMES=data.names;
             if(data.token)NET.myToken=data.token;
+            // 保存会话到sessionStorage, 刷新页面后可恢复
+            try{sessionStorage.setItem('ddz_session',JSON.stringify({room:NET.roomCode,index:NET.myIndex,token:NET.myToken,name:NET.myName}))}catch(e){}
         }
         else if(data.type==='names'){NAMES=data.names}
         else if(data.type==='view')handleView(data);
@@ -337,13 +339,13 @@ function connectToHost(){
         NET._reconAttempts=0;
         attemptReconnect();
     });
-    setTimeout(()=>{if(!connected)showOverlay(`<h2>连接失败</h2><p>找不到房间 ${NET.roomCode}</p><button class="btn-big btn-ready" onclick="showLobby()">返回</button>`)},8000);
+    setTimeout(()=>{if(!connected)showOverlay(`<h2>连接失败</h2><p>找不到房间 ${NET.roomCode}</p><button class="btn-big btn-ready" onclick="showLobby(true)">返回</button>`)},8000);
 }
 
 function attemptReconnect(){
     NET._reconAttempts=(NET._reconAttempts||0)+1;
     if(NET._reconAttempts>20){
-        showOverlay(`<h2>重连失败</h2><p>无法连接到房间</p><button class="btn-big btn-ready" onclick="showLobby()">返回大厅</button>`);
+        showOverlay(`<h2>重连失败</h2><p>无法连接到房间</p><button class="btn-big btn-ready" onclick="showLobby(true)">返回大厅</button>`);
         return;
     }
     setTimeout(()=>{
@@ -547,6 +549,7 @@ function renderGame(){
     // game over
     if(v.screen==='over'&&v.gameOver){
         let o=v.gameOver;
+        try{sessionStorage.removeItem('ddz_session')}catch(e){}
         let restart=NET.isHost?`<button class="btn-big btn-restart" onclick="startOnlineGame()">再来一局</button>`:`<p style="color:#aaa;font-size:13px">等待房主开始新一局<span class="wait-dot"></span></p>`;
         showOverlay(`<h2>${o.title}</h2><p>${o.detail}</p><p style="font-size:13px;color:#888">底分 ${o.baseBet} × 倍率 ${o.bombMul} = ${o.score}</p>${restart}`);
     }
@@ -622,7 +625,7 @@ function onHint(){
 // ============================================
 // 大厅
 // ============================================
-function showLobby(){
+function showLobby(clearSession){
     if(NET.peer){try{NET.peer.destroy()}catch(e){}}
     NET={peer:null,conns:[null,null],isHost:false,myIndex:-1,roomCode:'',ready:0,
         tokens:['','',''],disconnected:[false,false,false],reconTimers:[null,null,null],
@@ -633,9 +636,27 @@ function showLobby(){
     document.getElementById('controls').style.display='none';
     for(let i=0;i<3;i++){document.getElementById('scards-'+i).innerHTML='';document.getElementById('pname-'+i).textContent='-';document.getElementById('pcount-'+i).textContent=''}
     document.getElementById('bottom-cards').innerHTML='';
+    if(clearSession)try{sessionStorage.removeItem('ddz_session')}catch(e){}
+    // 检查是否有可恢复的会话
+    let resumeHTML='';
+    try{
+        let saved=sessionStorage.getItem('ddz_session');
+        if(saved&&!clearSession){
+            let s=JSON.parse(saved);
+            if(s.room&&s.token&&s.index>=0){
+                resumeHTML=`<div style="border:2px solid #e67e22;border-radius:12px;padding:14px;margin-bottom:18px;background:rgba(230,126,34,.15)">
+                    <div style="font-size:15px;font-weight:bold;color:#e67e22;margin-bottom:6px">检测到未完成的游戏</div>
+                    <div style="font-size:13px;color:#aaa;margin-bottom:10px">房间: ${s.room} | 昵称: ${s.name}</div>
+                    <button class="btn-big" style="background:#e67e22" onclick="resumeGame()">恢复游戏</button>
+                    <button class="btn-big" style="background:#7f8c8d;font-size:14px;padding:8px 16px" onclick="clearAndShowLobby()">放弃</button>
+                </div>`;
+            }
+        }
+    }catch(e){}
     showOverlay(`
         <h2>斗地主</h2>
         <p style="font-size:13px;color:#aaa;margin-bottom:18px">在线三人对战 | 自定义炸弹规则<br>对3(最小) → 炸弹(4~A) → 对2 → 火箭 → 四个3(最大)</p>
+        ${resumeHTML}
         <div style="margin-bottom:18px">
             <div style="margin-bottom:8px;font-size:13px;color:#aaa">你的昵称</div>
             <input class="name-input" id="inp-name" placeholder="输入昵称" maxlength="8" value="">
@@ -662,6 +683,20 @@ function doJoin(){
     let name=document.getElementById('inp-name').value.trim()||'玩家';
     if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+function resumeGame(){
+    try{
+        let saved=JSON.parse(sessionStorage.getItem('ddz_session'));
+        if(!saved||!saved.room||!saved.token)return showLobby(true);
+        NET.myToken=saved.token;
+        NET.myIndex=saved.index;
+        NET.myName=saved.name||'玩家';
+        if(!BGM.playing&&!BGM.muted)bgmStart();
+        joinRoom(saved.room,saved.name);
+    }catch(e){showLobby(true)}
+}
+function clearAndShowLobby(){
+    showLobby(true);
 }
 
 // ============================================
@@ -767,7 +802,7 @@ function sfxBomb(){
 // ============================================
 // 启动
 // ============================================
-window.onload=showLobby;
+window.onload=function(){showLobby(false)};
 </script>
 </body>
 </html>
