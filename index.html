@@ -318,6 +318,11 @@ function findAllPlays(hand, target) {
         for(let len=5;len<=sv.length;len++) for(let i=0;i<=sv.length-len;i++){let r=sv.slice(i,i+len);if(isConsecutive(r)){let cs=r.map(v=>grp[v][0]);let p=detectPlay(cs);if(p) plays.push({cards:cs,...p});}}
         let pv=vals.filter(v=>grp[v].length>=2&&v>=3&&v<=14);
         for(let len=3;len<=pv.length;len++) for(let i=0;i<=pv.length-len;i++){let r=pv.slice(i,i+len);if(isConsecutive(r)){let cs=[];r.forEach(v=>cs.push(...grp[v].slice(0,2)));let p=detectPlay(cs);if(p) plays.push({cards:cs,...p});}}
+        // 飞机不带
+        let triVals=vals.filter(v=>grp[v].length>=3&&v>=3&&v<=14);
+        for(let len=2;len<=triVals.length;len++) for(let i=0;i<=triVals.length-len;i++){let r=triVals.slice(i,i+len);if(isConsecutive(r)){let cs=[];r.forEach(v=>cs.push(...grp[v].slice(0,3)));let p=detectPlay(cs);if(p) plays.push({cards:cs,...p});}}
+        // 飞机带翅膀
+        for(let len=2;len<=triVals.length;len++) for(let i=0;i<=triVals.length-len;i++){let r=triVals.slice(i,i+len);if(isConsecutive(r)){let cs=[];r.forEach(v=>cs.push(...grp[v].slice(0,3)));let uv=new Set(r);let w=[];for(let c of hand){if(!uv.has(c.value)&&w.length<len)w.push(c);}if(w.length===len){cs.push(...w);let p=detectPlay(cs);if(p) plays.push({cards:cs,...p});}}}
         addBombs(plays, grp, vals, hand);
         return plays;
     }
