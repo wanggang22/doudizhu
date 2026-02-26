@@ -67,6 +67,9 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 @keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
 #msg{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);font-size:22px;font-weight:bold;color:#ffd700;text-shadow:2px 2px 6px rgba(0,0,0,.6);pointer-events:none;z-index:150;opacity:0;transition:opacity .3s}
 #msg.show{opacity:1}
+#music-btn{position:absolute;top:48px;right:10px;z-index:100;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:20px;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#music-btn:hover{background:rgba(0,0,0,.6)}
+#music-btn.muted{opacity:.4}
 
 @media(max-width:600px){
 .card{width:46px;height:66px;padding:2px 3px}.card .val{font-size:13px}.card .suit{font-size:14px}.hand-card{margin-left:-14px}
@@ -101,6 +104,7 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 </div>
 </div>
 <div id="msg"></div>
+<button id="music-btn" onclick="toggleMusic()" title="背景音乐">&#127925;</button>
 <div id="overlay"><div class="overlay-box" id="overlay-box"></div></div>
 </div>
 
@@ -378,6 +382,7 @@ function makeView(idx){
 // 游戏流程 (仅房主)
 // ============================================
 function startOnlineGame(){
+    if(!BGM.playing&&!BGM.muted)bgmStart();
     resetG();
     G.deck=createDeck();shuffle(G.deck);
     G.hands[0]=sortCards(G.deck.slice(0,16));
@@ -554,7 +559,12 @@ function showBidOverlay(maxBid){
     showOverlay(`<h2>轮到你叫地主</h2><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${btns}</div>`);
 }
 
-function showMsg(text,dur=1500){let el=document.getElementById('msg');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur)}
+function showMsg(text,dur=1500){
+    let el=document.getElementById('msg');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);
+    // 音效触发
+    if(text.includes('炸弹')||text.includes('火箭'))sfxBomb();
+    else if(text.includes('单张')||text.includes('对子')||text.includes('三张')||text.includes('顺子')||text.includes('连对')||text.includes('飞机')||text.includes('四带'))sfxPlay();
+}
 function showOverlay(html){document.getElementById('overlay').classList.remove('hidden');document.getElementById('overlay-box').innerHTML=html}
 function hideOverlay(){document.getElementById('overlay').classList.add('hidden')}
 
@@ -643,13 +653,115 @@ function showLobby(){
 
 function doCreate(){
     let name=document.getElementById('inp-name').value.trim()||'玩家1';
+    if(!BGM.playing&&!BGM.muted)bgmStart();
     createRoom(name);
 }
 function doJoin(){
     let code=document.getElementById('inp-room').value.trim();
     if(code.length!==4){showMsg('请输入4位房间号');return}
     let name=document.getElementById('inp-name').value.trim()||'玩家';
+    if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+
+// ============================================
+// 背景音乐 (Web Audio API 五声音阶生成)
+// ============================================
+let BGM={ctx:null,gain:null,playing:false,muted:false,timer:null};
+// 中国五声音阶 C D E G A 多个八度
+const PENTA=[261.6,293.7,329.6,392.0,440.0,523.3,587.3,659.3,784.0,880.0];
+const BASS=[130.8,146.8,164.8,196.0,220.0];
+// 预设旋律片段(音符索引), 循环播放
+const MELODY=[
+    [0,2,4,5, 4,2,0,2],
+    [4,5,6,4, 2,0,2,4],
+    [2,4,5,7, 5,4,2,0],
+    [5,6,7,5, 4,2,4,5],
+];
+
+function bgmInit(){
+    if(BGM.ctx)return;
+    BGM.ctx=new(window.AudioContext||window.webkitAudioContext)();
+    // 主音量
+    BGM.gain=BGM.ctx.createGain();
+    BGM.gain.gain.value=0.12;
+    // 简易混响(延迟反馈)
+    let delay=BGM.ctx.createDelay();delay.delayTime.value=0.3;
+    let fb=BGM.ctx.createGain();fb.gain.value=0.2;
+    let wet=BGM.ctx.createGain();wet.gain.value=0.15;
+    delay.connect(fb);fb.connect(delay);delay.connect(wet);wet.connect(BGM.ctx.destination);
+    BGM.gain.connect(BGM.ctx.destination);
+    BGM.gain.connect(delay);
+}
+
+function bgmPlayNote(freq,time,dur,type='triangle',vol=0.25){
+    let c=BGM.ctx,o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(0,time);
+    g.gain.linearRampToValueAtTime(vol,time+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,time+dur);
+    o.connect(g);g.connect(BGM.gain);
+    o.start(time);o.stop(time+dur+0.05);
+}
+
+function bgmSchedule(){
+    if(!BGM.playing)return;
+    let t=BGM.ctx.currentTime+0.1;
+    let mel=MELODY[Math.floor(Math.random()*MELODY.length)];
+    let tempo=0.45; // 每拍时长
+    // 旋律
+    for(let i=0;i<mel.length;i++){
+        let noteIdx=mel[i];
+        // 偶尔加点变化
+        if(Math.random()<0.2)noteIdx=PENTA.length-1-noteIdx;
+        if(noteIdx<0)noteIdx=0;if(noteIdx>=PENTA.length)noteIdx=PENTA.length-1;
+        bgmPlayNote(PENTA[noteIdx],t+i*tempo,tempo*1.2,'triangle',0.18);
+    }
+    // 低音伴奏(每2拍)
+    for(let i=0;i<4;i++){
+        let bi=Math.floor(Math.random()*BASS.length);
+        bgmPlayNote(BASS[bi],t+i*tempo*2,tempo*2.5,'sine',0.1);
+    }
+    BGM.timer=setTimeout(bgmSchedule,mel.length*tempo*1000);
+}
+
+function bgmStart(){
+    bgmInit();
+    if(BGM.ctx.state==='suspended')BGM.ctx.resume();
+    BGM.playing=true;
+    bgmSchedule();
+    document.getElementById('music-btn').classList.remove('muted');
+}
+
+function bgmStop(){
+    BGM.playing=false;
+    if(BGM.timer){clearTimeout(BGM.timer);BGM.timer=null}
+}
+
+function toggleMusic(){
+    if(!BGM.ctx){bgmStart();return}
+    if(BGM.muted){
+        BGM.gain.gain.value=0.12;BGM.muted=false;
+        if(!BGM.playing)bgmStart();
+        document.getElementById('music-btn').classList.remove('muted');
+    }else{
+        BGM.gain.gain.value=0;BGM.muted=true;
+        document.getElementById('music-btn').classList.add('muted');
+    }
+}
+
+// 出牌音效
+function sfxPlay(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(600+Math.random()*200,t,0.08,'square',0.06);
+    bgmPlayNote(800+Math.random()*200,t+0.06,0.06,'square',0.04);
+}
+// 炸弹音效
+function sfxBomb(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    for(let i=0;i<5;i++)bgmPlayNote(100+Math.random()*300,t+i*0.04,0.15,'sawtooth',0.08);
 }
 
 // ============================================
