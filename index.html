@@ -220,6 +220,7 @@ function setupHostConn(conn,idx){
         else if(data.type==='pass')hostHandlePass(idx);
         else if(data.type==='leave')hostHandleLeave(idx);
         else if(data.type==='ready')hostHandleReady(idx);
+        else if(data.type==='backToRoom'){NET.readyStates=[false,false,false];resetG();broadcastRoomState()}
     });
     conn.on('close',()=>{
         // 游戏未开始时当作离开, 游戏中当作断线
@@ -416,8 +417,7 @@ function makeView(idx){
 // ============================================
 function startOnlineGame(){
     if(NET.isHost&&NET.ready<3){showMsg('需要3名玩家才能开始');return}
-    // 首次开始需要全员准备(再来一局时G.phase==='over'跳过)
-    if(NET.isHost&&G.phase!=='over'&&!(NET.readyStates[0]&&NET.readyStates[1]&&NET.readyStates[2]))return;
+    if(NET.isHost&&!(NET.readyStates[0]&&NET.readyStates[1]&&NET.readyStates[2]))return;
     if(!BGM.playing&&!BGM.muted)bgmStart();
     resetG();
     G.deck=createDeck();shuffle(G.deck);
@@ -583,8 +583,7 @@ function renderGame(){
     if(v.screen==='over'&&v.gameOver){
         let o=v.gameOver;
         try{sessionStorage.removeItem('ddz_session')}catch(e){}
-        let restart=NET.isHost?`<button class="btn-big btn-restart" onclick="startOnlineGame()">再来一局</button>`:`<p style="color:#aaa;font-size:13px">等待房主开始新一局<span class="wait-dot"></span></p>`;
-        showOverlay(`<h2>${o.title}</h2><p>${o.detail}</p><p style="font-size:13px;color:#888">底分 ${o.baseBet} × 倍率 ${o.bombMul} = ${o.score}</p>${restart}`);
+        showOverlay(`<h2>${o.title}</h2><p>${o.detail}</p><p style="font-size:13px;color:#888">底分 ${o.baseBet} × 倍率 ${o.bombMul} = ${o.score}</p><button class="btn-big btn-restart" onclick="backToRoom()">再来一局</button>`);
     }
 }
 
@@ -778,6 +777,15 @@ function doJoin(){
     let name=document.getElementById('inp-name').value.trim()||'玩家';
     if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+function backToRoom(){
+    if(NET.isHost){
+        NET.readyStates=[false,false,false];
+        resetG();
+        broadcastRoomState();
+    }else{
+        clientSend({type:'backToRoom'});
+    }
 }
 function onReady(){
     if(NET.isHost){
