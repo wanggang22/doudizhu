@@ -577,14 +577,44 @@ function renderGame(){
         let sel=selected.has(c.id)?'selected':'';
         hel.innerHTML+=cardHTML(c,`hand-card ${sel}`);
     });
-    // card click - 任何时候都可以选牌研究
+    // card drag-select: 按住拖动可选多张牌
+    let dragMode=0; // 0=idle, 1=selecting, -1=deselecting
+    let dragTouched=new Set();
+    function applyDrag(el){
+        let id=parseInt(el.dataset.id);
+        if(dragTouched.has(id))return;
+        dragTouched.add(id);
+        if(dragMode===1){selected.add(id);el.classList.add('selected')}
+        else if(dragMode===-1){selected.delete(id);el.classList.remove('selected')}
+    }
+    function cardFromPoint(x,y){
+        let el=document.elementFromPoint(x,y);
+        if(!el)return null;
+        return el.closest('.hand-card');
+    }
     hel.querySelectorAll('.card').forEach(el=>{
-        el.addEventListener('click',()=>{
+        el.addEventListener('mousedown',e=>{
+            e.preventDefault();
             let id=parseInt(el.dataset.id);
-            if(selected.has(id)){selected.delete(id);el.classList.remove('selected')}
-            else{selected.add(id);el.classList.add('selected')}
+            dragMode=selected.has(id)?-1:1;
+            dragTouched.clear();
+            applyDrag(el);
         });
+        el.addEventListener('mouseenter',()=>{if(dragMode)applyDrag(el)});
+        el.addEventListener('touchstart',e=>{
+            let id=parseInt(el.dataset.id);
+            dragMode=selected.has(id)?-1:1;
+            dragTouched.clear();
+            applyDrag(el);
+        },{passive:true});
     });
+    hel.addEventListener('touchmove',e=>{
+        if(!dragMode||!e.touches[0])return;
+        let el=cardFromPoint(e.touches[0].clientX,e.touches[0].clientY);
+        if(el)applyDrag(el);
+    },{passive:true});
+    document.addEventListener('mouseup',()=>{dragMode=0},{once:true});
+    hel.addEventListener('touchend',()=>{dragMode=0});
     // controls
     let ctrl=document.getElementById('controls');
     if(v.isMyTurn&&v.screen==='play'){ctrl.style.display='flex';document.getElementById('btn-pass').disabled=!v.canPass}
