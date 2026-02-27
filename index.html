@@ -426,7 +426,10 @@ function startOnlineGame(){
     G.hands[1]=sortCards(G.deck.slice(16,32));
     G.hands[2]=sortCards(G.deck.slice(32,48));
     G.bottom=G.deck.slice(48,52);
-    G.phase='bid';G.bidder=Math.floor(Math.random()*3);G.bidCount=0;
+    // 谁拿到♦3谁先叫
+    let firstBidder=0;
+    for(let i=0;i<3;i++){if(G.hands[i].some(c=>c.value===3&&c.suit==='♦')){firstBidder=i;break}}
+    G.phase='bid';G.bidder=firstBidder;G.bidCount=0;
     G.tableSlots=[{},{},{}];
     hostBroadcast(i=>({type:'message',text:'游戏开始! 叫地主阶段',dur:1500}));
     setTimeout(()=>hostBidTurn(),1800);
