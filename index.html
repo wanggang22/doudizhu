@@ -528,11 +528,10 @@ function renderGame(){
     document.getElementById('hand-label').textContent=v.players[mi].name+' 的手牌';
     if(v.myHand)v.myHand.forEach(c=>{
         let sel=selected.has(c.id)?'selected':'';
-        let dis=v.isMyTurn&&v.screen==='play'?'':'disabled';
-        hel.innerHTML+=cardHTML(c,`hand-card ${sel} ${dis}`);
+        hel.innerHTML+=cardHTML(c,`hand-card ${sel}`);
     });
-    // card click
-    hel.querySelectorAll('.card:not(.disabled)').forEach(el=>{
+    // card click - 任何时候都可以选牌研究
+    hel.querySelectorAll('.card').forEach(el=>{
         el.addEventListener('click',()=>{
             let id=parseInt(el.dataset.id);
             if(selected.has(id)){selected.delete(id);el.classList.remove('selected')}
