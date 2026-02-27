@@ -619,9 +619,9 @@ function renderGame(){
     let ctrl=document.getElementById('controls');
     if(v.isMyTurn&&v.screen==='play'){ctrl.style.display='flex';document.getElementById('btn-pass').disabled=!v.canPass}
     else ctrl.style.display='none';
-    // bid overlay
-    if(v.screen==='bid'&&v.isMyTurn)showBidOverlay(v.bidMaxSoFar);
-    else if(v.screen==='bid'&&!v.isMyTurn)showOverlay(`<h2>叫地主阶段</h2><p>等待 ${v.players[v.current].name} 叫分<span class="wait-dot"></span></p>`);
+    // bid - 显示在牌桌中央，不遮挡手牌
+    if(v.screen==='bid'&&v.isMyTurn)showBidInTable(v.bidMaxSoFar);
+    else if(v.screen==='bid'&&!v.isMyTurn)showBidInTable(-1,v.players[v.current].name);
     // game over
     if(v.screen==='over'&&v.gameOver){
         let o=v.gameOver;
@@ -633,11 +633,17 @@ function renderGame(){
     }
 }
 
-function showBidOverlay(maxBid){
-    let btns='';
-    for(let i=maxBid+1;i<=3;i++)btns+=`<button class="btn-big btn-bid" onclick="onBid(${i})">${i}分</button>`;
-    btns+=`<button class="btn-big btn-bid pass" onclick="onBid(0)">不叫</button>`;
-    showOverlay(`<h2>轮到你叫地主</h2><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${btns}</div>`);
+function showBidInTable(maxBid,waitName){
+    // 把叫地主UI放到牌桌中央slot-1位置，不遮挡手牌
+    let el=document.getElementById('scards-1');
+    if(waitName){
+        el.innerHTML=`<div style="text-align:center"><div style="font-size:16px;font-weight:bold;color:#ffd700;margin-bottom:4px">叫地主阶段</div><div style="font-size:13px;color:#aaa">等待 ${waitName} 叫分<span class="wait-dot"></span></div></div>`;
+    }else{
+        let btns='';
+        for(let i=maxBid+1;i<=3;i++)btns+=`<button class="btn-big btn-bid" style="padding:8px 20px;font-size:15px" onclick="onBid(${i})">${i}分</button>`;
+        btns+=`<button class="btn-big btn-bid pass" style="padding:8px 20px;font-size:15px" onclick="onBid(0)">不叫</button>`;
+        el.innerHTML=`<div style="text-align:center"><div style="font-size:15px;font-weight:bold;color:#ffd700;margin-bottom:8px">轮到你叫地主</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${btns}</div></div>`;
+    }
 }
 
 function showMsg(text,dur=1500){
@@ -721,7 +727,8 @@ function showClientRoom(data){
 // 玩家操作
 // ============================================
 function onBid(amount){
-    hideOverlay();
+    // 清除牌桌中央的叫分按钮
+    let el=document.getElementById('scards-1');if(el)el.innerHTML='';
     if(NET.isHost)hostHandleBid(0,amount);
     else clientSend({type:'bid',amount});
 }
