@@ -84,6 +84,7 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 <body>
 <div id="game">
 <div id="top-bar">
+<span id="room-tag" style="display:none;font-size:11px;color:#adf;background:rgba(0,0,0,.3);padding:3px 8px;border-radius:10px;font-family:monospace;letter-spacing:2px;cursor:pointer" onclick="copyRoomCode()" title="点击复制房间号"></span>
 <div class="player-tab" id="ptab-0"><span class="p-name" id="pname-0">-</span><span class="p-count" id="pcount-0"></span></div>
 <div class="player-tab" id="ptab-1"><span class="p-name" id="pname-1">-</span><span class="p-count" id="pcount-1"></span></div>
 <div class="player-tab" id="ptab-2"><span class="p-name" id="pname-2">-</span><span class="p-count" id="pcount-2"></span></div>
@@ -536,6 +537,10 @@ function renderGame(){
     if(!VIEW)return;
     hideOverlay();
     let v=VIEW,mi=v.myIndex;
+    // room tag
+    let rtag=document.getElementById('room-tag');
+    if(NET.roomCode){rtag.textContent='房间 '+NET.roomCode;rtag.style.display=''}
+    else rtag.style.display='none';
     // top bar
     for(let i=0;i<3;i++){
         let tab=document.getElementById('ptab-'+i);
@@ -777,6 +782,11 @@ function doJoin(){
     let name=document.getElementById('inp-name').value.trim()||'玩家';
     if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+function copyRoomCode(){
+    if(!NET.roomCode)return;
+    try{navigator.clipboard.writeText(NET.roomCode);showMsg('房间号已复制: '+NET.roomCode,1200)}
+    catch(e){showMsg('房间号: '+NET.roomCode,2000)}
 }
 function backToRoom(){
     if(NET.isHost){
