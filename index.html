@@ -563,9 +563,19 @@ function showBidOverlay(maxBid){
 
 function showMsg(text,dur=1500){
     let el=document.getElementById('msg');el.textContent=text;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);
-    // 音效触发
-    if(text.includes('炸弹')||text.includes('火箭'))sfxBomb();
-    else if(text.includes('单张')||text.includes('对子')||text.includes('三张')||text.includes('顺子')||text.includes('连对')||text.includes('飞机')||text.includes('四带'))sfxPlay();
+    // 音效触发 - 不同牌型不同声音
+    if(text.includes('超级炸弹'))sfxSuperBomb();
+    else if(text.includes('火箭'))sfxRocket();
+    else if(text.includes('炸弹'))sfxBomb();
+    else if(text.includes('飞机'))sfxAirplane();
+    else if(text.includes('顺子'))sfxStraight();
+    else if(text.includes('连对'))sfxConsecPairs();
+    else if(text.includes('四带'))sfxFour2();
+    else if(text.includes('三带'))sfxTriple1();
+    else if(text.includes('三张'))sfxTriple();
+    else if(text.includes('对子'))sfxPair();
+    else if(text.includes('单张'))sfxSingle();
+    else if(text.includes('不出'))sfxPass();
 }
 function showOverlay(html){document.getElementById('overlay').classList.remove('hidden');document.getElementById('overlay-box').innerHTML=html}
 function hideOverlay(){document.getElementById('overlay').classList.add('hidden')}
@@ -784,18 +794,93 @@ function toggleMusic(){
     }
 }
 
-// 出牌音效
-function sfxPlay(){
+// 音效系统 - 不同牌型不同声音
+function sfxSingle(){
     if(!BGM.ctx||BGM.muted)return;
     let t=BGM.ctx.currentTime;
-    bgmPlayNote(600+Math.random()*200,t,0.08,'square',0.06);
-    bgmPlayNote(800+Math.random()*200,t+0.06,0.06,'square',0.04);
+    bgmPlayNote(660,t,0.1,'triangle',0.08);
 }
-// 炸弹音效
+function sfxPair(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(550,t,0.08,'triangle',0.07);
+    bgmPlayNote(660,t+0.08,0.08,'triangle',0.07);
+}
+function sfxTriple(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(440,t,0.07,'square',0.06);
+    bgmPlayNote(550,t+0.07,0.07,'square',0.06);
+    bgmPlayNote(660,t+0.14,0.07,'square',0.06);
+}
+function sfxTriple1(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(440,t,0.06,'square',0.06);
+    bgmPlayNote(550,t+0.06,0.06,'square',0.06);
+    bgmPlayNote(660,t+0.12,0.06,'square',0.06);
+    bgmPlayNote(880,t+0.2,0.06,'triangle',0.04);
+}
+function sfxFour2(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(330,t,0.06,'square',0.07);
+    bgmPlayNote(440,t+0.06,0.06,'square',0.07);
+    bgmPlayNote(550,t+0.12,0.06,'square',0.07);
+    bgmPlayNote(660,t+0.18,0.06,'square',0.07);
+    bgmPlayNote(550,t+0.26,0.05,'triangle',0.04);
+    bgmPlayNote(440,t+0.31,0.05,'triangle',0.04);
+}
+function sfxStraight(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    let notes=[392,440,494,523,587,660,698,784];
+    for(let i=0;i<notes.length;i++)bgmPlayNote(notes[i],t+i*0.04,0.08,'triangle',0.06);
+}
+function sfxConsecPairs(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    let notes=[392,440,523,587,660,784];
+    for(let i=0;i<notes.length;i++){bgmPlayNote(notes[i],t+i*0.05,0.09,'triangle',0.05);bgmPlayNote(notes[i]*0.75,t+i*0.05,0.09,'triangle',0.03)}
+}
+function sfxAirplane(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    // 飞机起飞上升音
+    let notes=[330,392,440,523,587,660,784,880];
+    for(let i=0;i<notes.length;i++)bgmPlayNote(notes[i],t+i*0.035,0.1,'sawtooth',0.04);
+    bgmPlayNote(880,t+0.3,0.2,'triangle',0.06);
+}
 function sfxBomb(){
     if(!BGM.ctx||BGM.muted)return;
     let t=BGM.ctx.currentTime;
-    for(let i=0;i<5;i++)bgmPlayNote(100+Math.random()*300,t+i*0.04,0.15,'sawtooth',0.08);
+    // 爆炸低音冲击
+    for(let i=0;i<6;i++)bgmPlayNote(80+Math.random()*200,t+i*0.03,0.18,'sawtooth',0.09);
+    bgmPlayNote(60,t+0.2,0.3,'sine',0.12);
+}
+function sfxRocket(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    // 火箭升空 + 爆炸
+    for(let i=0;i<8;i++)bgmPlayNote(200+i*80,t+i*0.04,0.12,'sawtooth',0.06);
+    for(let i=0;i<6;i++)bgmPlayNote(60+Math.random()*250,t+0.35+i*0.03,0.2,'sawtooth',0.1);
+    bgmPlayNote(50,t+0.55,0.4,'sine',0.12);
+}
+function sfxSuperBomb(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    // 四个3超级炸弹 - 三连爆
+    for(let r=0;r<3;r++){
+        let off=r*0.2;
+        for(let i=0;i<5;i++)bgmPlayNote(60+Math.random()*300,t+off+i*0.03,0.2,'sawtooth',0.08);
+    }
+    bgmPlayNote(40,t+0.65,0.5,'sine',0.15);
+}
+function sfxPass(){
+    if(!BGM.ctx||BGM.muted)return;
+    let t=BGM.ctx.currentTime;
+    bgmPlayNote(400,t,0.08,'sine',0.04);
+    bgmPlayNote(300,t+0.08,0.12,'sine',0.03);
 }
 
 // ============================================
