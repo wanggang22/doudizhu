@@ -199,7 +199,7 @@ function findAllPlays(hand,target){
 // ============================================
 let NET={peer:null,conns:[null,null],isHost:false,myIndex:-1,roomCode:'',ready:0,
     tokens:['','',''],disconnected:[false,false,false],reconTimers:[null,null,null],
-    myToken:'',myName:''};
+    myToken:'',myName:'',readyStates:[false,false,false]};
 
 function genCode(){const ch='ABCDEFGHJKLMNPQRSTUVWXYZ2345679';let c='';for(let i=0;i<4;i++)c+=ch[Math.floor(Math.random()*ch.length)];return c}
 function genToken(){return Math.random().toString(36).substr(2,12)+Date.now().toString(36)}
@@ -219,6 +219,7 @@ function setupHostConn(conn,idx){
         else if(data.type==='play')hostHandlePlay(idx,data.cardIds);
         else if(data.type==='pass')hostHandlePass(idx);
         else if(data.type==='leave')hostHandleLeave(idx);
+        else if(data.type==='ready')hostHandleReady(idx);
     });
     conn.on('close',()=>{
         // 游戏未开始时当作离开, 游戏中当作断线
@@ -263,6 +264,7 @@ function hostHandleLeave(idx){
     if(NET.conns[idx-1]){try{NET.conns[idx-1].close()}catch(e){}}
     NET.conns[idx-1]=null;
     NAMES[idx]='';NET.tokens[idx]='';
+    NET.readyStates[idx]=false;
     NET.ready=Math.max(1,NET.ready-1);
     // 通知房间内其他人
     for(let i=0;i<2;i++){let c=NET.conns[i];if(c&&c.open)c.send({type:'message',text:`${name} 离开了房间`,dur:1500})}
@@ -270,9 +272,19 @@ function hostHandleLeave(idx){
     broadcastRoomState();
 }
 
+function hostHandleReady(idx){
+    if(idx<0||idx>2)return;
+    NET.readyStates[idx]=true;
+    broadcastRoomState();
+    // 3人都准备了, 自动开始
+    if(NET.ready>=3&&NET.readyStates[0]&&NET.readyStates[1]&&NET.readyStates[2]){
+        setTimeout(()=>startOnlineGame(),1000);
+    }
+}
+
 function broadcastRoomState(){
-    let plist=[{name:NAMES[0],index:0,isHost:true}];
-    for(let i=0;i<2;i++){if(NET.conns[i]&&NET.conns[i].open)plist.push({name:NAMES[i+1],index:i+1,isHost:false})}
+    let plist=[{name:NAMES[0],index:0,isHost:true,ready:NET.readyStates[0]}];
+    for(let i=0;i<2;i++){if(NET.conns[i]&&NET.conns[i].open)plist.push({name:NAMES[i+1],index:i+1,isHost:false,ready:NET.readyStates[i+1]})}
     for(let i=0;i<2;i++){let c=NET.conns[i];if(c&&c.open)c.send({type:'roomState',players:plist,roomCode:NET.roomCode,total:NET.ready})}
     showWaiting();
 }
@@ -404,6 +416,8 @@ function makeView(idx){
 // ============================================
 function startOnlineGame(){
     if(NET.isHost&&NET.ready<3){showMsg('需要3名玩家才能开始');return}
+    // 首次开始需要全员准备(再来一局时G.phase==='over'跳过)
+    if(NET.isHost&&G.phase!=='over'&&!(NET.readyStates[0]&&NET.readyStates[1]&&NET.readyStates[2]))return;
     if(!BGM.playing&&!BGM.muted)bgmStart();
     resetG();
     G.deck=createDeck();shuffle(G.deck);
@@ -600,19 +614,41 @@ function showMsg(text,dur=1500){
 function showOverlay(html){document.getElementById('overlay').classList.remove('hidden');document.getElementById('overlay-box').innerHTML=html}
 function hideOverlay(){document.getElementById('overlay').classList.add('hidden')}
 
+function makeSlotHTML(name,tag,isMe,isReady,canReady){
+    let right='';
+    if(isReady){
+        right='<span style="color:#2ecc71;margin-left:auto;font-size:13px;font-weight:bold">&#10003; 已准备</span>';
+    }else if(canReady){
+        right='<button class="btn" style="margin-left:auto;padding:5px 16px;font-size:13px;background:#e67e22" onclick="onReady()">准备</button>';
+    }else{
+        right='<span style="color:#f39c12;margin-left:auto;font-size:12px">未准备</span>';
+    }
+    let bg=isReady?'rgba(46,204,113,.2)':'rgba(46,204,113,.1)';
+    let border=isReady?'rgba(46,204,113,.5)':'rgba(46,204,113,.3)';
+    return`<div style="padding:10px 14px;background:${bg};border:1.5px solid ${border};border-radius:10px;margin:5px 0;display:flex;align-items:center;gap:8px"><span style="color:#2ecc71;font-size:18px">&#9679;</span><span style="font-weight:bold">${name}${tag}</span>${right}</div>`;
+}
+function makeEmptySlot(){
+    return'<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>';
+}
+
 function showWaiting(){
     let slots='';
     for(let i=0;i<3;i++){
         let occupied=i===0||(NET.conns[i-1]&&NET.conns[i-1].open&&NAMES[i]);
         if(occupied&&NAMES[i]){
             let tag=i===0?' (房主)':'';
-            slots+=`<div style="padding:10px 14px;background:rgba(46,204,113,.15);border:1.5px solid rgba(46,204,113,.4);border-radius:10px;margin:5px 0;display:flex;align-items:center;gap:8px"><span style="color:#2ecc71;font-size:18px">&#9679;</span><span style="font-weight:bold">${NAMES[i]}${tag}</span></div>`;
+            let isMe=i===0;
+            slots+=makeSlotHTML(NAMES[i],tag,isMe,NET.readyStates[i],isMe&&!NET.readyStates[i]);
         }else{
-            slots+=`<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>`;
+            slots+=makeEmptySlot();
         }
     }
-    let startBtn=NET.ready>=3?`<button class="btn-big btn-ready" onclick="startOnlineGame()">开始游戏</button>`:`<button class="btn-big btn-ready" disabled>等待玩家 (${NET.ready}/3)</button>`;
-    showOverlay(`<h2>房间</h2><div class="room-code">${NET.roomCode}</div><p style="font-size:13px;color:#aaa">分享房间号给朋友加入</p><div style="margin:14px 0">${slots}</div>${startBtn}`);
+    let rc=NET.readyStates.filter(r=>r).length;
+    let info;
+    if(NET.ready<3)info=`<p>等待玩家加入 (${NET.ready}/3)<span class="wait-dot"></span></p>`;
+    else if(rc<3)info=`<p>等待全员准备 (${rc}/3 已准备)<span class="wait-dot"></span></p>`;
+    else info='<p style="color:#2ecc71;font-weight:bold">全员准备, 游戏即将开始!</p>';
+    showOverlay(`<h2>房间</h2><div class="room-code">${NET.roomCode}</div><p style="font-size:13px;color:#aaa">分享房间号给朋友加入</p><div style="margin:14px 0">${slots}</div>${info}`);
 }
 
 function showClientRoom(data){
@@ -621,13 +657,18 @@ function showClientRoom(data){
         let p=data.players.find(x=>x.index===i);
         if(p){
             let tag=p.isHost?' (房主)':'';
-            let me=p.index===NET.myIndex?' (你)':'';
-            slots+=`<div style="padding:10px 14px;background:rgba(46,204,113,.15);border:1.5px solid rgba(46,204,113,.4);border-radius:10px;margin:5px 0;display:flex;align-items:center;gap:8px"><span style="color:#2ecc71;font-size:18px">&#9679;</span><span style="font-weight:bold">${p.name}${tag}${me}</span></div>`;
+            let isMe=p.index===NET.myIndex;
+            let me=isMe?' (你)':'';
+            slots+=makeSlotHTML(p.name+me,tag,isMe,p.ready,isMe&&!p.ready);
         }else{
-            slots+=`<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>`;
+            slots+=makeEmptySlot();
         }
     }
-    let info=data.total>=3?'<p style="color:#2ecc71;font-weight:bold">人数已满, 等待房主开始游戏<span class="wait-dot"></span></p>':`<p>等待玩家加入 (${data.total}/3)<span class="wait-dot"></span></p>`;
+    let rc=data.players.filter(p=>p.ready).length;
+    let info;
+    if(data.total<3)info=`<p>等待玩家加入 (${data.total}/3)<span class="wait-dot"></span></p>`;
+    else if(rc<3)info=`<p>等待全员准备 (${rc}/3 已准备)<span class="wait-dot"></span></p>`;
+    else info='<p style="color:#2ecc71;font-weight:bold">全员准备, 游戏即将开始!</p>';
     showOverlay(`<h2>房间</h2><div class="room-code">${data.roomCode}</div><div style="margin:14px 0">${slots}</div>${info}<button class="btn-big" style="background:#e74c3c;margin-top:8px" onclick="leaveRoom()">离开房间</button>`);
 }
 
@@ -683,7 +724,7 @@ function showLobby(clearSession){
     if(NET.peer){try{NET.peer.destroy()}catch(e){}}
     NET={peer:null,conns:[null,null],isHost:false,myIndex:-1,roomCode:'',ready:0,
         tokens:['','',''],disconnected:[false,false,false],reconTimers:[null,null,null],
-        myToken:'',myName:''};
+        myToken:'',myName:'',readyStates:[false,false,false]};
     VIEW=null;selected.clear();
     document.getElementById('hand-cards').innerHTML='';
     document.getElementById('hand-label').textContent='';
@@ -737,6 +778,13 @@ function doJoin(){
     let name=document.getElementById('inp-name').value.trim()||'玩家';
     if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+function onReady(){
+    if(NET.isHost){
+        hostHandleReady(0);
+    }else{
+        clientSend({type:'ready'});
+    }
 }
 function leaveRoom(){
     if(NET.conns&&NET.conns[0]&&NET.conns[0].open)NET.conns[0].send({type:'leave'});
