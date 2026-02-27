@@ -530,7 +530,9 @@ function cardHTML(card,extra=''){
     if(!card)return'';
     if(card.value>=16){let cls=card.value===16?'joker-small':'joker-big';let icon=card.value===16?'🃏':'🤡';return`<div class="card ${cls} ${extra}" data-id="${card.id}"><span class="val">${card.display}</span><span class="suit">${icon}</span></div>`}
     let color=RED_SUITS.has(card.suit)?'red':'black';
-    return`<div class="card ${color} ${extra}" data-id="${card.id}"><span class="val">${card.display}</span><span class="suit">${card.suit}</span></div>`
+    let face=card.value===11?'🗡️':card.value===12?'👸':card.value===13?'👑':'';
+    let suitShow=face||card.suit;
+    return`<div class="card ${color} ${extra}" data-id="${card.id}"><span class="val">${card.display}</span><span class="suit">${suitShow}</span></div>`
 }
 
 function renderGame(){
