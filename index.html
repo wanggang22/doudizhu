@@ -218,8 +218,13 @@ function setupHostConn(conn,idx){
         if(data.type==='bid')hostHandleBid(idx,data.amount);
         else if(data.type==='play')hostHandlePlay(idx,data.cardIds);
         else if(data.type==='pass')hostHandlePass(idx);
+        else if(data.type==='leave')hostHandleLeave(idx);
     });
-    conn.on('close',()=>hostHandleDisconnect(idx));
+    conn.on('close',()=>{
+        // 游戏未开始时当作离开, 游戏中当作断线
+        if(!G.phase||G.phase==='idle')hostHandleLeave(idx);
+        else hostHandleDisconnect(idx);
+    });
 }
 
 function hostHandleDisconnect(idx){
@@ -252,6 +257,26 @@ function hostHandleReconnect(conn,idx,token){
     return true;
 }
 
+function hostHandleLeave(idx){
+    if(idx<1||idx>2)return;
+    let name=NAMES[idx];
+    if(NET.conns[idx-1]){try{NET.conns[idx-1].close()}catch(e){}}
+    NET.conns[idx-1]=null;
+    NAMES[idx]='';NET.tokens[idx]='';
+    NET.ready=Math.max(1,NET.ready-1);
+    // 通知房间内其他人
+    for(let i=0;i<2;i++){let c=NET.conns[i];if(c&&c.open)c.send({type:'message',text:`${name} 离开了房间`,dur:1500})}
+    showMsg(`${name} 离开了房间`,1500);
+    broadcastRoomState();
+}
+
+function broadcastRoomState(){
+    let plist=[{name:NAMES[0],index:0,isHost:true}];
+    for(let i=0;i<2;i++){if(NET.conns[i]&&NET.conns[i].open)plist.push({name:NAMES[i+1],index:i+1,isHost:false})}
+    for(let i=0;i<2;i++){let c=NET.conns[i];if(c&&c.open)c.send({type:'roomState',players:plist,roomCode:NET.roomCode,total:NET.ready})}
+    showWaiting();
+}
+
 function createRoom(name){
     NET.roomCode=genCode();NET.isHost=true;NET.myIndex=0;NET.ready=1;
     NET.tokens=['host','',''];NET.disconnected=[false,false,false];
@@ -276,22 +301,15 @@ function createRoom(name){
             }else if(data.type==='name'){
                 // 新玩家加入
                 let idx=!NET.conns[0]||!NET.conns[0].open?1:(!NET.conns[1]||!NET.conns[1].open?2:-1);
-                if(idx===-1){conn.close();return}
+                if(idx===-1){conn.send({type:'message',text:'房间已满',dur:2000});conn.close();return}
                 NET.conns[idx-1]=conn;
                 NAMES[idx]=data.name||('玩家'+(idx+1));
                 NET.tokens[idx]=genToken();
                 NET.ready++;
                 setupHostConn(conn,idx);
                 conn.send({type:'assign',index:idx,names:NAMES,room:NET.roomCode,token:NET.tokens[idx]});
-                [0,1].forEach(ci=>{let c=NET.conns[ci];if(c&&c.open)c.send({type:'names',names:NAMES})});
-                updateWaiting();
-                if(NET.ready>=3)setTimeout(()=>startOnlineGame(),800);
-                // 后续消息走setupHostConn里的handler
-                conn.on('data',d=>{
-                    if(d.type==='bid')hostHandleBid(idx,d.amount);
-                    else if(d.type==='play')hostHandlePlay(idx,d.cardIds);
-                    else if(d.type==='pass')hostHandlePass(idx);
-                });
+                // 广播房间状态给所有人
+                setTimeout(()=>broadcastRoomState(),200);
             }
         });
     });
@@ -319,7 +337,7 @@ function connectToHost(){
             showOverlay(`<h2>重连中</h2><p>正在恢复游戏<span class="wait-dot"></span></p>`);
         }else{
             conn.send({type:'name',name:NET.myName});
-            showOverlay(`<h2>已加入房间</h2><p>等待游戏开始<span class="wait-dot"></span></p>`);
+            showOverlay(`<h2>加入中</h2><p>正在连接<span class="wait-dot"></span></p>`);
         }
     });
     conn.on('data',data=>{
@@ -331,6 +349,7 @@ function connectToHost(){
         }
         else if(data.type==='names'){NAMES=data.names}
         else if(data.type==='view')handleView(data);
+        else if(data.type==='roomState')showClientRoom(data);
         else if(data.type==='message')showMsg(data.text,data.dur||1500);
         else if(data.type==='paused')showOverlay(`<h2>${data.name} 断线了</h2><p>等待重连中<span class="wait-dot"></span></p>`);
     });
@@ -384,6 +403,7 @@ function makeView(idx){
 // 游戏流程 (仅房主)
 // ============================================
 function startOnlineGame(){
+    if(NET.isHost&&NET.ready<3){showMsg('需要3名玩家才能开始');return}
     if(!BGM.playing&&!BGM.muted)bgmStart();
     resetG();
     G.deck=createDeck();shuffle(G.deck);
@@ -581,10 +601,35 @@ function showOverlay(html){document.getElementById('overlay').classList.remove('
 function hideOverlay(){document.getElementById('overlay').classList.add('hidden')}
 
 function showWaiting(){
-    let list=NAMES.slice(0,NET.ready).map((n,i)=>`<div>${n}${i===0?' (房主)':''}</div>`).join('');
-    showOverlay(`<h2>房间号</h2><div class="room-code">${NET.roomCode}</div><p>分享房间号给朋友加入</p><div class="player-list">${list}</div><p>等待玩家加入 (${NET.ready}/3)<span class="wait-dot"></span></p><div class="sub">所有玩家就绪后自动开始</div>`);
+    let slots='';
+    for(let i=0;i<3;i++){
+        let occupied=i===0||(NET.conns[i-1]&&NET.conns[i-1].open&&NAMES[i]);
+        if(occupied&&NAMES[i]){
+            let tag=i===0?' (房主)':'';
+            slots+=`<div style="padding:10px 14px;background:rgba(46,204,113,.15);border:1.5px solid rgba(46,204,113,.4);border-radius:10px;margin:5px 0;display:flex;align-items:center;gap:8px"><span style="color:#2ecc71;font-size:18px">&#9679;</span><span style="font-weight:bold">${NAMES[i]}${tag}</span></div>`;
+        }else{
+            slots+=`<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>`;
+        }
+    }
+    let startBtn=NET.ready>=3?`<button class="btn-big btn-ready" onclick="startOnlineGame()">开始游戏</button>`:`<button class="btn-big btn-ready" disabled>等待玩家 (${NET.ready}/3)</button>`;
+    showOverlay(`<h2>房间</h2><div class="room-code">${NET.roomCode}</div><p style="font-size:13px;color:#aaa">分享房间号给朋友加入</p><div style="margin:14px 0">${slots}</div>${startBtn}`);
 }
-function updateWaiting(){showWaiting()}
+
+function showClientRoom(data){
+    let slots='';
+    for(let i=0;i<3;i++){
+        let p=data.players.find(x=>x.index===i);
+        if(p){
+            let tag=p.isHost?' (房主)':'';
+            let me=p.index===NET.myIndex?' (你)':'';
+            slots+=`<div style="padding:10px 14px;background:rgba(46,204,113,.15);border:1.5px solid rgba(46,204,113,.4);border-radius:10px;margin:5px 0;display:flex;align-items:center;gap:8px"><span style="color:#2ecc71;font-size:18px">&#9679;</span><span style="font-weight:bold">${p.name}${tag}${me}</span></div>`;
+        }else{
+            slots+=`<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>`;
+        }
+    }
+    let info=data.total>=3?'<p style="color:#2ecc71;font-weight:bold">人数已满, 等待房主开始游戏<span class="wait-dot"></span></p>':`<p>等待玩家加入 (${data.total}/3)<span class="wait-dot"></span></p>`;
+    showOverlay(`<h2>房间</h2><div class="room-code">${data.roomCode}</div><div style="margin:14px 0">${slots}</div>${info}<button class="btn-big" style="background:#e74c3c;margin-top:8px" onclick="leaveRoom()">离开房间</button>`);
+}
 
 // ============================================
 // 玩家操作
@@ -692,6 +737,11 @@ function doJoin(){
     let name=document.getElementById('inp-name').value.trim()||'玩家';
     if(!BGM.playing&&!BGM.muted)bgmStart();
     joinRoom(code,name);
+}
+function leaveRoom(){
+    if(NET.conns&&NET.conns[0]&&NET.conns[0].open)NET.conns[0].send({type:'leave'});
+    try{sessionStorage.removeItem('ddz_session')}catch(e){}
+    showLobby(true);
 }
 function resumeGame(){
     try{
