@@ -581,6 +581,7 @@ function renderGame(){
     let dragMode=0; // 0=idle, 1=selecting, -1=deselecting
     let dragTouched=new Set();
     let isDragging=false;
+    let dragStartEl=null;
     function toggleCard(el){
         let id=parseInt(el.dataset.id);
         if(selected.has(id)){selected.delete(id);el.classList.remove('selected')}
@@ -603,37 +604,40 @@ function renderGame(){
             e.preventDefault();
             let id=parseInt(el.dataset.id);
             dragMode=selected.has(id)?-1:1;
+            dragStartEl=el;
             dragTouched.clear();
             isDragging=false;
         });
         el.addEventListener('mouseenter',()=>{
-            if(dragMode){
-                isDragging=true;
-                applyDrag(el);
-            }
+            if(!dragMode||el===dragStartEl)return;
+            if(!isDragging){isDragging=true;applyDrag(dragStartEl)}
+            applyDrag(el);
         });
-        el.addEventListener('mouseup',e=>{
-            if(!isDragging){toggleCard(el)}
-            dragMode=0;
+        el.addEventListener('mouseup',()=>{
+            if(!isDragging)toggleCard(el);
+            dragMode=0;dragStartEl=null;
         });
         el.addEventListener('touchstart',e=>{
             let id=parseInt(el.dataset.id);
             dragMode=selected.has(id)?-1:1;
+            dragStartEl=el;
             dragTouched.clear();
             isDragging=false;
         },{passive:true});
-        el.addEventListener('touchend',e=>{
-            if(!isDragging){toggleCard(el)}
-            dragMode=0;
+        el.addEventListener('touchend',()=>{
+            if(!isDragging)toggleCard(el);
+            dragMode=0;dragStartEl=null;
         });
     });
     hel.addEventListener('touchmove',e=>{
         if(!dragMode||!e.touches[0])return;
-        isDragging=true;
         let el=cardFromPoint(e.touches[0].clientX,e.touches[0].clientY);
-        if(el)applyDrag(el);
+        if(el&&el!==dragStartEl){
+            if(!isDragging){isDragging=true;applyDrag(dragStartEl)}
+            applyDrag(el);
+        }
     },{passive:true});
-    document.addEventListener('mouseup',()=>{dragMode=0},{once:true});
+    document.addEventListener('mouseup',()=>{dragMode=0;dragStartEl=null},{once:true});
     // controls
     let ctrl=document.getElementById('controls');
     if(v.isMyTurn&&v.screen==='play'){ctrl.style.display='flex';document.getElementById('btn-pass').disabled=!v.canPass}
