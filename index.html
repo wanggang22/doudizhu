@@ -98,7 +98,7 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 <div id="hand-area">
 <div id="hand-label"></div>
 <div id="hand-cards"></div>
-<div id="controls" style="display:none">
+<div id="controls">
 <button class="btn btn-play" onclick="onPlay()">出牌</button>
 <button class="btn btn-pass" id="btn-pass" onclick="onPass()">不出</button>
 <button class="btn btn-hint" onclick="onHint()">提示</button>
@@ -640,8 +640,9 @@ function renderGame(){
     document.addEventListener('mouseup',()=>{dragMode=0;dragStartEl=null},{once:true});
     // controls
     let ctrl=document.getElementById('controls');
-    if(v.isMyTurn&&v.screen==='play'){ctrl.style.display='flex';document.getElementById('btn-pass').disabled=!v.canPass}
-    else ctrl.style.display='none';
+    let isMyPlay=v.isMyTurn&&v.screen==='play';
+    ctrl.querySelectorAll('.btn').forEach(b=>b.disabled=!isMyPlay);
+    if(isMyPlay)document.getElementById('btn-pass').disabled=!v.canPass;
     // bid - 显示在牌桌中央，不遮挡手牌
     if(v.screen==='bid'&&v.isMyTurn)showBidInTable(v.bidMaxSoFar);
     else if(v.screen==='bid'&&!v.isMyTurn)showBidInTable(-1,v.players[v.current].name);
@@ -848,7 +849,7 @@ function showLobby(clearSession){
     VIEW=null;selected.clear();
     document.getElementById('hand-cards').innerHTML='';
     document.getElementById('hand-label').textContent='';
-    document.getElementById('controls').style.display='none';
+    document.getElementById('controls').querySelectorAll('.btn').forEach(b=>b.disabled=true);
     for(let i=0;i<3;i++){document.getElementById('scards-'+i).innerHTML='';document.getElementById('pname-'+i).textContent='-';document.getElementById('pcount-'+i).textContent=''}
     document.getElementById('bottom-cards').innerHTML='';
     if(clearSession)try{sessionStorage.removeItem('ddz_session')}catch(e){}
