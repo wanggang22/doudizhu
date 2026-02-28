@@ -577,9 +577,15 @@ function renderGame(){
         let sel=selected.has(c.id)?'selected':'';
         hel.innerHTML+=cardHTML(c,`hand-card ${sel}`);
     });
-    // card drag-select: 按住拖动可选多张牌
+    // card select: 单击选中/取消 + 按住拖动多选
     let dragMode=0; // 0=idle, 1=selecting, -1=deselecting
     let dragTouched=new Set();
+    let isDragging=false;
+    function toggleCard(el){
+        let id=parseInt(el.dataset.id);
+        if(selected.has(id)){selected.delete(id);el.classList.remove('selected')}
+        else{selected.add(id);el.classList.add('selected')}
+    }
     function applyDrag(el){
         let id=parseInt(el.dataset.id);
         if(dragTouched.has(id))return;
@@ -598,23 +604,36 @@ function renderGame(){
             let id=parseInt(el.dataset.id);
             dragMode=selected.has(id)?-1:1;
             dragTouched.clear();
-            applyDrag(el);
+            isDragging=false;
         });
-        el.addEventListener('mouseenter',()=>{if(dragMode)applyDrag(el)});
+        el.addEventListener('mouseenter',()=>{
+            if(dragMode){
+                isDragging=true;
+                applyDrag(el);
+            }
+        });
+        el.addEventListener('mouseup',e=>{
+            if(!isDragging){toggleCard(el)}
+            dragMode=0;
+        });
         el.addEventListener('touchstart',e=>{
             let id=parseInt(el.dataset.id);
             dragMode=selected.has(id)?-1:1;
             dragTouched.clear();
-            applyDrag(el);
+            isDragging=false;
         },{passive:true});
+        el.addEventListener('touchend',e=>{
+            if(!isDragging){toggleCard(el)}
+            dragMode=0;
+        });
     });
     hel.addEventListener('touchmove',e=>{
         if(!dragMode||!e.touches[0])return;
+        isDragging=true;
         let el=cardFromPoint(e.touches[0].clientX,e.touches[0].clientY);
         if(el)applyDrag(el);
     },{passive:true});
     document.addEventListener('mouseup',()=>{dragMode=0},{once:true});
-    hel.addEventListener('touchend',()=>{dragMode=0});
     // controls
     let ctrl=document.getElementById('controls');
     if(v.isMyTurn&&v.screen==='play'){ctrl.style.display='flex';document.getElementById('btn-pass').disabled=!v.canPass}
