@@ -10,23 +10,33 @@
 body{background:#0d5a2a;font-family:'Microsoft YaHei','PingFang SC',sans-serif;height:100vh;height:100dvh;overflow:hidden;user-select:none;color:#fff}
 #game{width:100vw;height:100vh;height:100dvh;position:relative;background:radial-gradient(ellipse at center,#1a7a3a 0%,#0d5a2a 60%,#083a1a 100%);display:flex;flex-direction:column}
 
-#top-bar{display:flex;justify-content:space-around;align-items:center;padding:8px 12px;background:rgba(0,0,0,.3);flex-shrink:0}
-.player-tab{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:rgba(255,255,255,.1);font-size:14px;transition:all .3s}
-.player-tab.active{background:rgba(46,204,113,.4);box-shadow:0 0 10px rgba(46,204,113,.3)}
-.player-tab.landlord .p-name::after{content:' [地主]';color:#e74c3c;font-weight:bold}
-.player-tab.me{border:1.5px solid rgba(46,204,113,.5)}
-.p-name{font-weight:bold}.p-count{color:#adf;font-size:12px}.p-count.zero{color:#e74c3c}
+#top-bar{display:flex;justify-content:center;align-items:center;gap:12px;padding:6px 12px;background:rgba(0,0,0,.3);flex-shrink:0}
 
-#bottom-cards-bar{display:flex;justify-content:center;align-items:center;gap:6px;padding:4px 0;flex-shrink:0}
+#bottom-cards-bar{display:flex;align-items:center;gap:6px}
 #bottom-cards-bar .label{font-size:13px;color:#aaa;margin-right:4px}
 
-#table{flex:1;display:flex;justify-content:space-around;align-items:center;padding:8px 16px;min-height:0}
-.table-slot{display:flex;flex-direction:column;align-items:center;min-width:80px}
-.table-slot .slot-name{font-size:12px;color:#aaa;margin-bottom:3px}
-.table-slot .slot-cards{display:flex;justify-content:center;min-height:64px;align-items:center}
+#table{flex:1;display:grid;grid-template-columns:140px 1fr 140px;grid-template-rows:1fr;min-height:0;padding:8px 0}
+
+.side-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:8px 4px}
+
+.player-badge{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.1);font-size:13px;transition:all .3s;text-align:center;width:100%}
+.player-badge.active{background:rgba(46,204,113,.4);box-shadow:0 0 10px rgba(46,204,113,.3)}
+.player-badge.landlord .p-name::after{content:' [地主]';color:#e74c3c;font-weight:bold}
+.p-name{font-weight:bold}.p-count{color:#adf;font-size:12px}.p-count.zero{color:#e74c3c}
+
+.side-play{display:flex;flex-wrap:wrap;justify-content:center;min-height:56px;align-items:center}
+.side-play .card-sm{margin-left:-10px}.side-play .card-sm:first-child{margin-left:0}
+
+#center-area{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto}
+#center-play{display:flex;flex-wrap:wrap;justify-content:center;min-height:64px;align-items:center}
+#center-play .card-sm{margin-left:-8px}#center-play .card-sm:first-child{margin-left:0}
+#center-play .room-code{font-size:36px;font-weight:bold;color:#2ecc71;letter-spacing:6px;font-family:monospace}
+
 .slot-label{font-size:16px;color:#ffd700;font-weight:bold}
 
 #hand-area{flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding:4px 0 8px;background:rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.1)}
+#my-play{display:flex;flex-wrap:wrap;justify-content:center;min-height:34px;align-items:center;margin-bottom:2px}
+#my-play .card-sm{margin-left:-8px}#my-play .card-sm:first-child{margin-left:0}
 #hand-label{font-size:13px;color:#2ecc71;margin-bottom:3px;font-weight:bold}
 #hand-cards{display:flex;justify-content:center;flex-wrap:nowrap;padding:18px 10px 0;overflow-x:auto;max-width:100%;min-height:90px}
 #controls{display:flex;gap:10px;margin-top:5px;margin-bottom:4px}
@@ -42,7 +52,6 @@ body{background:#0d5a2a;font-family:'Microsoft YaHei','PingFang SC',sans-serif;h
 .hand-card{margin-left:-16px}.hand-card:first-child{margin-left:0}
 .card-sm{width:42px;height:60px;padding:2px 3px;cursor:default}.card-sm .val{font-size:11px}.card-sm .suit{font-size:13px}
 .card-sm:hover{transform:none;box-shadow:1px 2px 4px rgba(0,0,0,.3)}
-.table-slot .card-sm{margin-left:-8px}.table-slot .card-sm:first-child{margin-left:0}
 .card-xs{width:34px;height:50px;padding:2px;cursor:default}.card-xs .val{font-size:10px}.card-xs .suit{font-size:11px}.card-xs:hover{transform:none}
 
 .btn{padding:7px 22px;font-size:14px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;transition:all .2s;color:#fff}
@@ -70,12 +79,26 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 #music-btn{position:absolute;top:48px;right:10px;z-index:100;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:20px;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 #music-btn:hover{background:rgba(0,0,0,.6)}
 #music-btn.muted{opacity:.4}
+#help-btn{position:absolute;top:8px;right:10px;z-index:100;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-weight:bold}
+#help-btn:hover{background:rgba(0,0,0,.6)}
+#help-panel{display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:250;background:rgba(0,0,0,.82);backdrop-filter:blur(4px);overflow-y:auto;padding:20px}
+#help-panel.show{display:flex;justify-content:center}
+#help-content{background:linear-gradient(135deg,#1a3a2a,#2a5a3a);border:2px solid rgba(46,204,113,.4);border-radius:16px;padding:28px 32px;max-width:520px;width:100%;color:#ddd;font-size:14px;line-height:1.8;align-self:flex-start}
+#help-content h2{color:#2ecc71;font-size:20px;margin-bottom:12px;text-align:center}
+#help-content h3{color:#ffd700;font-size:15px;margin:14px 0 6px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:4px}
+#help-content table{width:100%;border-collapse:collapse;margin:6px 0;font-size:13px}
+#help-content td{padding:3px 8px;border-bottom:1px solid rgba(255,255,255,.06)}
+#help-content td:first-child{color:#2ecc71;white-space:nowrap;font-weight:bold}
+#help-content .close-help{display:block;margin:18px auto 0;padding:8px 32px;font-size:15px;background:#7f8c8d;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:bold}
 
 @media(max-width:600px){
 .card{width:46px;height:66px;padding:2px 3px}.card .val{font-size:13px}.card .suit{font-size:14px}.hand-card{margin-left:-14px}
 .card-sm{width:36px;height:52px}.card-sm .val{font-size:9px}.card-sm .suit{font-size:11px}
 .card-xs{width:30px;height:44px}
-.player-tab{padding:4px 8px;font-size:11px;gap:4px}.btn{padding:6px 14px;font-size:12px}
+#table{grid-template-columns:90px 1fr 90px}
+.player-badge{padding:5px 6px;font-size:11px}
+.side-play .card-sm{margin-left:-14px}
+.btn{padding:6px 14px;font-size:12px}
 .overlay-box{padding:24px 20px}.overlay-box h2{font-size:20px}.btn-big{padding:10px 28px;font-size:16px}
 .room-code{font-size:34px}input.room-input{width:130px;font-size:18px;padding:8px 10px}
 }
@@ -85,17 +108,23 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 <div id="game">
 <div id="top-bar">
 <span id="room-tag" style="display:none;font-size:11px;color:#adf;background:rgba(0,0,0,.3);padding:3px 8px;border-radius:10px;font-family:monospace;letter-spacing:2px;cursor:pointer" onclick="copyRoomCode()" title="点击复制房间号"></span>
-<div class="player-tab" id="ptab-0"><span class="p-name" id="pname-0">-</span><span class="p-count" id="pcount-0"></span></div>
-<div class="player-tab" id="ptab-1"><span class="p-name" id="pname-1">-</span><span class="p-count" id="pcount-1"></span></div>
-<div class="player-tab" id="ptab-2"><span class="p-name" id="pname-2">-</span><span class="p-count" id="pcount-2"></span></div>
-</div>
 <div id="bottom-cards-bar"><span class="label">底牌</span><div id="bottom-cards" style="display:flex;gap:3px"></div></div>
+</div>
 <div id="table">
-<div class="table-slot"><div class="slot-name" id="sname-0">-</div><div class="slot-cards" id="scards-0"></div></div>
-<div class="table-slot"><div class="slot-name" id="sname-1">-</div><div class="slot-cards" id="scards-1"></div></div>
-<div class="table-slot"><div class="slot-name" id="sname-2">-</div><div class="slot-cards" id="scards-2"></div></div>
+<div id="side-left" class="side-panel">
+<div class="player-badge" id="badge-left"><span class="p-name" id="pname-left">-</span><span class="p-count" id="pcount-left"></span></div>
+<div class="side-play" id="play-left"></div>
+</div>
+<div id="center-area">
+<div id="center-play"></div>
+</div>
+<div id="side-right" class="side-panel">
+<div class="player-badge" id="badge-right"><span class="p-name" id="pname-right">-</span><span class="p-count" id="pcount-right"></span></div>
+<div class="side-play" id="play-right"></div>
+</div>
 </div>
 <div id="hand-area">
+<div id="my-play"></div>
 <div id="hand-label"></div>
 <div id="hand-cards"></div>
 <div id="controls">
@@ -106,6 +135,56 @@ input.name-input{width:120px;padding:8px 12px;font-size:15px;text-align:center;b
 </div>
 <div id="msg"></div>
 <button id="music-btn" onclick="toggleMusic()" title="背景音乐">&#127925;</button>
+<button id="help-btn" onclick="toggleHelp()" title="玩法介绍">?</button>
+<div id="help-panel">
+<div id="help-content">
+<h2>斗地主 - 玩法介绍</h2>
+
+<h3>基本规则</h3>
+<p>3人游戏，使用52张牌（3~A各4张，2只有2张，大小王各1张）。每人发16张，留4张底牌。通过叫地主确定地主，地主获得底牌（共20张），另外两人为农民组队对抗地主。</p>
+
+<h3>叫地主</h3>
+<p>随机一人开始叫分（1/2/3分），顺序轮流，可叫更高分或不叫。叫3分直接当地主，否则叫最高分者为地主。无人叫则重新发牌。</p>
+
+<h3>出牌顺序</h3>
+<p>地主先出牌，逆时针轮流。你在下方，右边是下家，左边是上家。必须管上家的牌或选择不出（轮到自己新一轮时必须出牌）。</p>
+
+<h3>牌型一览</h3>
+<table>
+<tr><td>单张</td><td>任意一张牌</td></tr>
+<tr><td>对子</td><td>两张相同点数的牌</td></tr>
+<tr><td>三张</td><td>三张相同点数的牌</td></tr>
+<tr><td>三带一</td><td>三张 + 任意一张</td></tr>
+<tr><td>四带二</td><td>四张 + 任意两张</td></tr>
+<tr><td>顺子</td><td>5张及以上连续单牌（3~A，不含2和王）</td></tr>
+<tr><td>连对</td><td>3对及以上连续对子（3~A）</td></tr>
+<tr><td>飞机</td><td>2组及以上连续三张（3~A）</td></tr>
+<tr><td>飞机带翅膀</td><td>飞机 + 等量单牌</td></tr>
+</table>
+
+<h3>炸弹系统（特殊规则）</h3>
+<p>炸弹可以打任何普通牌型，大炸弹打小炸弹。每出一个炸弹 +1番（四个3 +3番）。</p>
+<table>
+<tr><td>对3 炸弹</td><td>最小炸弹，+1番</td></tr>
+<tr><td>普通炸弹</td><td>四张相同点数（4~A），点数大的赢，+1番</td></tr>
+<tr><td>对2 炸弹</td><td>两张2，大于普通炸弹，+1番</td></tr>
+<tr><td>火箭</td><td>大王 + 小王，+1番</td></tr>
+<tr><td>四个3</td><td>超级炸弹！最大，+3番</td></tr>
+</table>
+
+<h3>胜负与计分</h3>
+<p>先出完牌的一方获胜。底分 = 叫地主分数，每1番翻一倍。地主赢：地主 +底分x番数x2，农民各 -底分x番数。农民赢则反之。</p>
+
+<h3>操作提示</h3>
+<table>
+<tr><td>选牌</td><td>点击手牌选中/取消，按住拖动多选</td></tr>
+<tr><td>出牌</td><td>选好牌后点"出牌"按钮</td></tr>
+<tr><td>提示</td><td>点"提示"自动推荐可出的牌，多次点击切换</td></tr>
+</table>
+
+<button class="close-help" onclick="toggleHelp()">知道了</button>
+</div>
+</div>
 <div id="overlay"><div class="overlay-box" id="overlay-box"></div></div>
 </div>
 
@@ -492,9 +571,21 @@ function hostHandlePass(idx){
     G.passCount++;
     G.tableSlots[idx]={label:'不出'};
     hostBroadcast(i=>({type:'message',text:`${NAMES[idx]}: 不出`,dur:1000}));
-    if(G.passCount>=2){G.lastPlay=null;G.passCount=0;G.tableSlots=[{},{},{}]}
+    let roundOver=G.passCount>=2;
+    if(roundOver){G.lastPlay=null;G.passCount=0}
     G.current=(idx+1)%3;
-    setTimeout(()=>{hostBroadcast(i=>makeView(i));if(SOLO&&G.current!==0)setTimeout(()=>aiPlay(G.current),800)},1400);
+    setTimeout(()=>{
+        hostBroadcast(i=>makeView(i));
+        if(roundOver){
+            setTimeout(()=>{
+                G.tableSlots=[{},{},{}];
+                hostBroadcast(i=>makeView(i));
+                if(SOLO&&G.current!==0)setTimeout(()=>aiPlay(G.current),800);
+            },1000);
+        }else{
+            if(SOLO&&G.current!==0)setTimeout(()=>aiPlay(G.current),800);
+        }
+    },1400);
 }
 
 function hostGameOver(winner){
@@ -544,35 +635,51 @@ function renderGame(){
     if(!VIEW)return;
     hideOverlay();
     let v=VIEW,mi=v.myIndex;
+    // position mapping
+    let leftIdx=(mi+2)%3, rightIdx=(mi+1)%3;
     // room tag
     let rtag=document.getElementById('room-tag');
     if(SOLO){rtag.textContent='单机模式';rtag.style.display=''}
     else if(NET.roomCode){rtag.textContent='房间 '+NET.roomCode;rtag.style.display=''}
     else rtag.style.display='none';
-    // top bar
-    for(let i=0;i<3;i++){
-        let tab=document.getElementById('ptab-'+i);
-        tab.className='player-tab'+(v.current===i?' active':'')+(v.players[i].isLandlord?' landlord':'')+(i===mi?' me':'');
-        document.getElementById('pname-'+i).textContent=v.players[i].name+(i===mi?' (你)':'');
-        let cnt=document.getElementById('pcount-'+i);
-        cnt.textContent=v.players[i].count+'张';cnt.className='p-count'+(v.players[i].count===0?' zero':'');
-    }
-    // slot names
-    for(let i=0;i<3;i++)document.getElementById('sname-'+i).textContent=v.players[i].name;
+    // left player badge (上家)
+    let badgeL=document.getElementById('badge-left');
+    badgeL.className='player-badge'+(v.current===leftIdx?' active':'')+(v.players[leftIdx].isLandlord?' landlord':'');
+    document.getElementById('pname-left').textContent=v.players[leftIdx].name+' (上家)';
+    let cntL=document.getElementById('pcount-left');
+    cntL.textContent=v.players[leftIdx].count+'张';cntL.className='p-count'+(v.players[leftIdx].count===0?' zero':'');
+    // right player badge (下家)
+    let badgeR=document.getElementById('badge-right');
+    badgeR.className='player-badge'+(v.current===rightIdx?' active':'')+(v.players[rightIdx].isLandlord?' landlord':'');
+    document.getElementById('pname-right').textContent=v.players[rightIdx].name+' (下家)';
+    let cntR=document.getElementById('pcount-right');
+    cntR.textContent=v.players[rightIdx].count+'张';cntR.className='p-count'+(v.players[rightIdx].count===0?' zero':'');
     // bottom cards
     let bc=document.getElementById('bottom-cards');
     if(v.bottomRevealed&&v.bottomCards)bc.innerHTML=v.bottomCards.map(c=>cardHTML(c,'card-xs')).join('');
     else bc.innerHTML='<span style="color:#666;font-size:12px">🂠🂠🂠🂠</span>';
-    // table
-    for(let i=0;i<3;i++){
-        let el=document.getElementById('scards-'+i);el.innerHTML='';
-        let slot=v.tableSlots[i];
-        if(slot&&slot.cards)slot.cards.forEach(c=>{el.innerHTML+=cardHTML(c,'card-sm')});
-        else if(slot&&slot.label)el.innerHTML=`<span class="slot-label">${slot.label}</span>`;
-    }
+    // table - left play area
+    let elL=document.getElementById('play-left');elL.innerHTML='';
+    let slotL=v.tableSlots[leftIdx];
+    if(slotL&&slotL.cards)slotL.cards.forEach(c=>{elL.innerHTML+=cardHTML(c,'card-sm')});
+    else if(slotL&&slotL.label)elL.innerHTML=`<span class="slot-label">${slotL.label}</span>`;
+    // table - right play area
+    let elR=document.getElementById('play-right');elR.innerHTML='';
+    let slotR=v.tableSlots[rightIdx];
+    if(slotR&&slotR.cards)slotR.cards.forEach(c=>{elR.innerHTML+=cardHTML(c,'card-sm')});
+    else if(slotR&&slotR.label)elR.innerHTML=`<span class="slot-label">${slotR.label}</span>`;
+    // center-play: only used for bid UI, clear it
+    document.getElementById('center-play').innerHTML='';
+    // my play area (above hand cards)
+    let elM=document.getElementById('my-play');elM.innerHTML='';
+    let slotM=v.tableSlots[mi];
+    if(slotM&&slotM.cards)slotM.cards.forEach(c=>{elM.innerHTML+=cardHTML(c,'card-sm')});
+    else if(slotM&&slotM.label)elM.innerHTML=`<span class="slot-label">${slotM.label}</span>`;
     // hand
     let hel=document.getElementById('hand-cards');hel.innerHTML='';
-    document.getElementById('hand-label').textContent=v.players[mi].name+' 的手牌';
+    let hlbl=document.getElementById('hand-label');
+    hlbl.textContent=v.players[mi].name+' 的手牌'+(v.players[mi].isLandlord?' [地主]':'');
+    hlbl.style.color=v.current===mi?'#ffd700':'#2ecc71';
     if(v.myHand)v.myHand.forEach(c=>{
         let sel=selected.has(c.id)?'selected':'';
         hel.innerHTML+=cardHTML(c,`hand-card ${sel}`);
@@ -658,8 +765,8 @@ function renderGame(){
 }
 
 function showBidInTable(maxBid,waitName){
-    // 把叫地主UI放到牌桌中央slot-1位置，不遮挡手牌
-    let el=document.getElementById('scards-1');
+    // 把叫地主UI放到牌桌中央位置
+    let el=document.getElementById('center-play');
     if(waitName){
         el.innerHTML=`<div style="text-align:center"><div style="font-size:16px;font-weight:bold;color:#ffd700;margin-bottom:4px">叫地主阶段</div><div style="font-size:13px;color:#aaa">等待 ${waitName} 叫分<span class="wait-dot"></span></div></div>`;
     }else{
@@ -706,45 +813,71 @@ function makeEmptySlot(){
     return'<div style="padding:10px 14px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.15);border-radius:10px;margin:5px 0;color:#666;font-size:13px">&#9711; 等待加入...</div>';
 }
 
-function showWaiting(){
-    let slots='';
-    for(let i=0;i<3;i++){
-        let occupied=i===0||(NET.conns[i-1]&&NET.conns[i-1].open&&NAMES[i]);
-        if(occupied&&NAMES[i]){
-            let tag=i===0?' (房主)':'';
-            let isMe=i===0;
-            slots+=makeSlotHTML(NAMES[i],tag,isMe,NET.readyStates[i],isMe&&!NET.readyStates[i]);
+function renderRoomOnTable(players,myIdx,roomCode,totalCount,canLeave){
+    hideOverlay();
+    // room tag
+    let rtag=document.getElementById('room-tag');
+    rtag.textContent='房间 '+roomCode;rtag.style.display='';
+    rtag.title='点击复制房间号';
+    let leftIdx=(myIdx+2)%3, rightIdx=(myIdx+1)%3;
+    // render a side position
+    function renderSide(side,idx,label){
+        let badge=document.getElementById('badge-'+side);
+        let play=document.getElementById('play-'+side);
+        let p=players.find(x=>x.index===idx);
+        if(p){
+            badge.className='player-badge'+(p.ready?' active':'');
+            document.getElementById('pname-'+side).textContent=p.name+' ('+label+')';
+            document.getElementById('pcount-'+side).textContent=p.isHost?'房主':'';
+            play.innerHTML=p.ready
+                ?'<span style="color:#2ecc71;font-size:14px;font-weight:bold">&#10003; 已准备</span>'
+                :'<span style="color:#f39c12;font-size:13px">未准备</span>';
         }else{
-            slots+=makeEmptySlot();
+            badge.className='player-badge';
+            document.getElementById('pname-'+side).textContent=label;
+            document.getElementById('pcount-'+side).textContent='';
+            play.innerHTML='<span style="color:#666;font-size:12px">等待加入<span class="wait-dot"></span></span>';
         }
     }
-    let rc=NET.readyStates.filter(r=>r).length;
-    let info;
-    if(NET.ready<3)info=`<p>等待玩家加入 (${NET.ready}/3)<span class="wait-dot"></span></p>`;
-    else if(rc<3)info=`<p>等待全员准备 (${rc}/3 已准备)<span class="wait-dot"></span></p>`;
-    else info='<p style="color:#2ecc71;font-weight:bold">全员准备, 游戏即将开始!</p>';
-    showOverlay(`<h2>房间</h2><div class="room-code">${NET.roomCode}</div><p style="font-size:13px;color:#aaa">分享房间号给朋友加入</p><div style="margin:14px 0">${slots}</div>${info}`);
+    renderSide('left',leftIdx,'上家');
+    renderSide('right',rightIdx,'下家');
+    // center: room code + status
+    let rc=players.filter(p=>p.ready).length;
+    let statusText;
+    if(totalCount<3)statusText=`等待玩家加入 (${totalCount}/3)<span class="wait-dot"></span>`;
+    else if(rc<3)statusText=`等待全员准备 (${rc}/3)<span class="wait-dot"></span>`;
+    else statusText='<span style="color:#2ecc71;font-weight:bold">全员准备, 即将开始!</span>';
+    document.getElementById('center-play').innerHTML=
+        `<div style="text-align:center">
+        <div class="room-code" style="font-size:38px;margin:4px 0">${roomCode}</div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px">点击上方房间号复制</div>
+        <div style="font-size:14px;margin-top:6px">${statusText}</div>
+        </div>`;
+    // my area (bottom): ready button
+    let me=players.find(x=>x.index===myIdx);
+    let myHtml='';
+    if(me&&me.ready)myHtml='<span style="color:#2ecc71;font-size:14px;font-weight:bold">&#10003; 已准备</span>';
+    else myHtml='<button class="btn" style="padding:7px 24px;font-size:14px;background:#e67e22" onclick="onReady()">准备</button>';
+    if(canLeave)myHtml+=' <button class="btn" style="padding:7px 18px;font-size:13px;background:#e74c3c;margin-left:8px" onclick="leaveRoom()">离开</button>';
+    document.getElementById('my-play').innerHTML=myHtml;
+    // hand label: my name
+    let hlbl=document.getElementById('hand-label');
+    hlbl.textContent=me?me.name+(me.isHost?' (房主)':''):'';
+    hlbl.style.color='#2ecc71';
+    document.getElementById('hand-cards').innerHTML='';
+}
+
+function showWaiting(){
+    let players=[];
+    for(let i=0;i<3;i++){
+        let occupied=i===0||(NET.conns[i-1]&&NET.conns[i-1].open&&NAMES[i]);
+        if(occupied&&NAMES[i])players.push({index:i,name:NAMES[i],isHost:i===0,ready:NET.readyStates[i]});
+    }
+    renderRoomOnTable(players,0,NET.roomCode,NET.ready,false);
 }
 
 function showClientRoom(data){
-    let slots='';
-    for(let i=0;i<3;i++){
-        let p=data.players.find(x=>x.index===i);
-        if(p){
-            let tag=p.isHost?' (房主)':'';
-            let isMe=p.index===NET.myIndex;
-            let me=isMe?' (你)':'';
-            slots+=makeSlotHTML(p.name+me,tag,isMe,p.ready,isMe&&!p.ready);
-        }else{
-            slots+=makeEmptySlot();
-        }
-    }
-    let rc=data.players.filter(p=>p.ready).length;
-    let info;
-    if(data.total<3)info=`<p>等待玩家加入 (${data.total}/3)<span class="wait-dot"></span></p>`;
-    else if(rc<3)info=`<p>等待全员准备 (${rc}/3 已准备)<span class="wait-dot"></span></p>`;
-    else info='<p style="color:#2ecc71;font-weight:bold">全员准备, 游戏即将开始!</p>';
-    showOverlay(`<h2>房间</h2><div class="room-code">${data.roomCode}</div><div style="margin:14px 0">${slots}</div>${info}<button class="btn-big" style="background:#e74c3c;margin-top:8px" onclick="leaveRoom()">离开房间</button>`);
+    renderRoomOnTable(data.players,NET.myIndex,data.roomCode,data.total,true);
 }
 
 // ============================================
@@ -752,7 +885,7 @@ function showClientRoom(data){
 // ============================================
 function onBid(amount){
     // 清除牌桌中央的叫分按钮
-    let el=document.getElementById('scards-1');if(el)el.innerHTML='';
+    let el=document.getElementById('center-play');if(el)el.innerHTML='';
     if(NET.isHost)hostHandleBid(0,amount);
     else clientSend({type:'bid',amount});
 }
@@ -850,7 +983,10 @@ function showLobby(clearSession){
     document.getElementById('hand-cards').innerHTML='';
     document.getElementById('hand-label').textContent='';
     document.getElementById('controls').querySelectorAll('.btn').forEach(b=>b.disabled=true);
-    for(let i=0;i<3;i++){document.getElementById('scards-'+i).innerHTML='';document.getElementById('pname-'+i).textContent='-';document.getElementById('pcount-'+i).textContent=''}
+    document.getElementById('play-left').innerHTML='';document.getElementById('play-right').innerHTML='';document.getElementById('center-play').innerHTML='';document.getElementById('my-play').innerHTML='';
+    document.getElementById('pname-left').textContent='-';document.getElementById('pcount-left').textContent='';
+    document.getElementById('pname-right').textContent='-';document.getElementById('pcount-right').textContent='';
+    document.getElementById('badge-left').className='player-badge';document.getElementById('badge-right').className='player-badge';
     document.getElementById('bottom-cards').innerHTML='';
     if(clearSession)try{sessionStorage.removeItem('ddz_session')}catch(e){}
     // 检查是否有可恢复的会话
@@ -1128,6 +1264,13 @@ function sfxPass(){
     let t=BGM.ctx.currentTime;
     bgmPlayNote(400,t,0.08,'sine',0.04);
     bgmPlayNote(300,t+0.08,0.12,'sine',0.03);
+}
+
+// ============================================
+// 帮助面板
+// ============================================
+function toggleHelp(){
+    document.getElementById('help-panel').classList.toggle('show');
 }
 
 // ============================================
